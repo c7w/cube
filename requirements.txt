@@ -5,4 +5,5 @@ pillow>=8.3.0
 matplotlib>=3.5.0
 pytest>=7.0.0
 pytest-cov>=4.0.0
+pygame>=2.1.0
 # pybullet>=3.2.5  # 暂时注释掉，避免编译问题 
