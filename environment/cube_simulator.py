@@ -108,8 +108,8 @@ class CubeSimulator:
         self.state[9:18] = Color.ORANGE.value  # BACK - Orange
         self.state[18:27] = Color.BLUE.value   # LEFT - Blue
         self.state[27:36] = Color.GREEN.value  # RIGHT - Green
-        self.state[36:45] = Color.WHITE.value  # UP - White
-        self.state[45:54] = Color.YELLOW.value # DOWN - Yellow
+        self.state[36:45] = Color.YELLOW.value # UP - Yellow
+        self.state[45:54] = Color.WHITE.value  # DOWN - White
         
         # Action history for undo functionality
         self.action_history = []

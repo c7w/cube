@@ -232,8 +232,27 @@ class CubeBenchEnv(gym.Env):
     def _calculate_reward(self, current_state: np.ndarray, action: str, next_state: np.ndarray) -> float:
         """Calculate reward for the transition"""
         is_done = self.cube_simulator.is_solved()
+        
+        # Convert states to 6x9 format for reward function compatibility
+        def convert_to_6x9(state_54):
+            """Convert 54-element state to 6x9 format"""
+            faces = np.zeros((6, 9), dtype=int)
+            face_order = ['FRONT', 'BACK', 'LEFT', 'RIGHT', 'UP', 'DOWN']
+            face_positions = {
+                'FRONT': 0, 'BACK': 9, 'LEFT': 18, 'RIGHT': 27, 'UP': 36, 'DOWN': 45
+            }
+            
+            for i, face_name in enumerate(face_order):
+                start_pos = face_positions[face_name]
+                faces[i] = state_54[start_pos:start_pos+9]
+            
+            return faces
+        
+        current_state_6x9 = convert_to_6x9(current_state)
+        next_state_6x9 = convert_to_6x9(next_state)
+        
         return self.reward_function.calculate_reward(
-            current_state, action, next_state, is_done, self.step_count, self.max_steps
+            current_state_6x9, action, next_state_6x9, is_done, self.step_count, self.max_steps
         )
     
     def _apply_view_action(self, action_name: str):

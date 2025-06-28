@@ -30,12 +30,12 @@ class CubeRenderer:
     
     # Color mapping for visualization
     COLOR_MAP = {
-        0: (255, 255, 255),  # White
-        1: (0, 255, 255),    # Yellow
-        2: (0, 0, 255),      # Red
-        3: (0, 165, 255),    # Orange
-        4: (255, 0, 0),      # Blue
-        5: (0, 255, 0)       # Green
+        0: (255, 255, 255),  # White (DOWN face)
+        1: (255, 255, 0),    # Yellow (UP face)
+        2: (255, 0, 0),      # Red (FRONT face)
+        3: (255, 165, 0),    # Orange (BACK face)
+        4: (0, 0, 255),      # Blue (LEFT face)
+        5: (0, 255, 0)       # Green (RIGHT face)
     }
     
     # Color names for symbolic representation

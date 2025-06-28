@@ -51,16 +51,19 @@ class ActionType(Enum):
 class ActionSpace:
     """Action space for the CubeBench environment"""
     
-    def __init__(self, include_view_actions: bool = True, include_special_actions: bool = False):
+    def __init__(self, include_view_actions: bool = True, include_special_actions: bool = False, 
+                 custom_view_actions: List[str] = None):
         """
         Initialize action space.
         
         Args:
             include_view_actions: Whether to include view manipulation actions
             include_special_actions: Whether to include special actions (solve, scramble, undo)
+            custom_view_actions: Custom list of view actions (overrides default view actions)
         """
         self.include_view_actions = include_view_actions
         self.include_special_actions = include_special_actions
+        self.custom_view_actions = custom_view_actions
         
         # Build action list
         self.actions = []
@@ -73,8 +76,14 @@ class ActionSpace:
         
         # Add view actions if enabled
         if include_view_actions:
-            for action in ViewAction:
-                self.actions.append((ActionType.VIEW, action.value))
+            if custom_view_actions:
+                # Use custom view actions
+                for action_name in custom_view_actions:
+                    self.actions.append((ActionType.VIEW, action_name))
+            else:
+                # Use default view actions
+                for action in ViewAction:
+                    self.actions.append((ActionType.VIEW, action.value))
         
         # Add special actions if enabled
         if include_special_actions:
