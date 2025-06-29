@@ -11,7 +11,7 @@ import os
 # Add parent directory to path to import environment modules
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from environment.cube_simulator import CubeSimulator
+from environment.utils.cube_simulator import CubeSimulator
 from environment.renderer import CubeRenderer, RenderMode
 import cv2
 import numpy as np

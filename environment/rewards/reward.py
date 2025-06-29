@@ -49,6 +49,24 @@ class RewardFunction(ABC):
         pass
 
 
+class DummyReward(RewardFunction):
+    """
+    Dummy reward function.
+    Returns 0 reward.
+    """
+    def calculate_reward(self,
+                         current_state: np.ndarray,
+                         action: str,
+                         next_state: np.ndarray,
+                         is_done: bool,
+                         step_count: int,
+                         max_steps: int) -> float:
+        return 0.0
+    
+    def reset(self):
+        pass
+
+
 class SparseReward(RewardFunction):
     """
     Sparse reward function.
@@ -351,4 +369,17 @@ def create_exploration_reward() -> RewardFunction:
         def reset(self):
             self.visited_states.clear()
     
-    return ExplorationReward() 
+    return ExplorationReward()
+
+
+def get_reward_function(type: str = "dummy", **kwargs) -> RewardFunction:
+    if type == "dummy":
+        return DummyReward()
+    elif type == "sparse":
+        return SparseReward(**kwargs)
+    elif type == "dense":
+        return DenseReward(**kwargs)
+    elif type == "hybrid":
+        return HybridReward(**kwargs)
+    elif type == "custom":
+        return CustomReward(**kwargs)

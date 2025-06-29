@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from environment import make_cubebench_env, ActionSpace
-from environment.reward import RewardType, RewardFactory
+from environment.rewards.reward import RewardType, RewardFactory
 
 def main():
     """Demonstrate basic environment usage."""

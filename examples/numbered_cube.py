@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from environment.cube_simulator import CubeSimulator, Color
+from environment.utils.cube_simulator import CubeSimulator, Color
 from environment.renderer import CubeRenderer, RenderMode
 
 HELP_TEXT = """

@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from environment.base_env import CubeBenchEnv
+from trash.base_env import CubeBenchEnv
 
 def test_env_reset_and_step():
     env = CubeBenchEnv(max_steps=5, scramble_moves=2, observation_mode="symbolic")

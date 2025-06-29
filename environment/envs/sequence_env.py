@@ -1,182 +1,84 @@
-"""
-Sequence-based CubeBench environment for token modeling.
-"""
-
 import numpy as np
-import gymnasium as gym
+from typing import Any, Dict, Optional
 from gymnasium import spaces
-from typing import Dict, Any, Optional, Tuple, List
+from environment.envs.base_env import BaseCubeEnv
+from environment.utils.cube_simulator import CubeSimulator
+from environment.action_space import CUBE_ONLY_ACTION_SPACE, ActionSpace
+from environment.rewards.reward import RewardFunction, get_reward_function
 
-from ..base_env import CubeBenchEnv
-from ..action_space import ActionSpace, ActionType
-from ..reward import RewardFunction
-from ..renderers.sequence_renderer import SequenceRenderer
-from ..utils.state_utils import serialize_state, deserialize_state
+COLOR_CHARS = "WYROBG"  # 0:W, 1:Y, 2:R, 3:O, 4:B, 5:G
 
+def serialize_state(state: np.ndarray) -> str:
+    return ''.join(COLOR_CHARS[x] for x in state)
 
-class SequenceEnv(CubeBenchEnv):
+def deserialize_state(sequence: str) -> np.ndarray:
+    color_to_idx = {c: i for i, c in enumerate(COLOR_CHARS)}
+    return np.array([color_to_idx[c] for c in sequence], dtype=int)
+
+def validate_state_string(sequence: str) -> bool:
+    return len(sequence) == 54 and all(c in COLOR_CHARS for c in sequence)
+
+class SequenceRenderer:
     """
-    Sequence-based environment for token modeling.
-    
-    State and observation are both 54-character token sequences.
-    Only supports cube rotation actions (12 actions total).
+    Renderer for sequence-based cube representation.
+    Handles conversion between state arrays and token sequences.
     """
-    
-    def __init__(self,
-                 reward_function: Optional[RewardFunction] = None,
-                 max_steps: int = 1000,
-                 scramble_moves: int = 20):
-        """
-        Initialize sequence environment.
+    def render_state_to_sequence(self, state: np.ndarray) -> str:
+        return serialize_state(state)
+    def render_sequence_to_state(self, sequence: str) -> np.ndarray:
+        return deserialize_state(sequence)
+    def render(self, state: np.ndarray) -> Dict[str, Any]:
+        sequence = self.render_state_to_sequence(state)
+        return {
+            'sequence': sequence,
+            'length': len(sequence),
+            'valid': validate_state_string(sequence)
+        }
+    def get_observation(self, state: np.ndarray) -> str:
+        return self.render_state_to_sequence(state)
+    def validate_observation(self, observation: str) -> bool:
+        return validate_state_string(observation)
+
+# --- SequenceEnv implementation ---
+class SequenceCubeEnv(BaseCubeEnv):
+    """
+    Sequence-based CubeBench environment.
+    Only implements the required abstract methods with minimal logic.
+    """
+    def __init__(self, cube_manager: CubeSimulator, action_space_config: ActionSpace, max_steps: int = 1000, scramble_moves: int = 20, reward_function: RewardFunction = None):
+        # Initialize renderer first
+        self.renderer = SequenceRenderer()
         
-        Args:
-            reward_function: Reward function to use
-            max_steps: Maximum steps per episode
-            scramble_moves: Number of moves to scramble the cube
-        """
-        # Initialize sequence-specific attributes first
-        self.sequence_renderer = SequenceRenderer()
-        self.current_state_str = ""
-        
-        # Create action space with only cube moves (no view actions)
-        action_space_config = ActionSpace(
-            include_view_actions=False,
-            include_special_actions=False
-        )
-        
-        # Initialize base environment with sequence-specific settings
+        # Call parent constructor with dependencies
         super().__init__(
+            cube_manager=cube_manager,
             action_space_config=action_space_config,
             reward_function=reward_function,
-            render_mode="symbolic",  # We don't need image rendering
             max_steps=max_steps,
-            scramble_moves=scramble_moves,
-            observation_mode="symbolic"  # Use symbolic mode as base
+            scramble_moves=scramble_moves
         )
         
-        # Override observation space for string sequences
-        self.observation_space = spaces.Text(54, charset="WYROBG")
+        # Now reset after everything is initialized
+        self.reset()
     
-    def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[str, Dict[str, Any]]:
-        """
-        Reset the environment.
-        
-        Args:
-            seed: Random seed
-            options: Additional options
-            
-        Returns:
-            Tuple of (observation, info)
-        """
-        # Call parent reset to get initial state
-        _, info = super().reset(seed=seed, options=options)
-        
-        # Convert state to string representation
-        self.current_state_str = serialize_state(self.current_state)
-        
-        # Update info
-        info['state_string'] = self.current_state_str
-        info['state_valid'] = self.sequence_renderer.validate_observation(self.current_state_str)
-        
-        return self.current_state_str, info
-    
-    def step(self, action: int) -> Tuple[str, float, bool, bool, Dict[str, Any]]:
-        """
-        Take a step in the environment.
-        
-        Args:
-            action: Action index (0-11 for cube moves)
-            
-        Returns:
-            Tuple of (observation, reward, terminated, truncated, info)
-        """
-        # Call parent step to handle cube logic
-        _, reward, terminated, truncated, info = super().step(action)
-        
-        # Convert new state to string representation
-        self.current_state_str = serialize_state(self.current_state)
-        
-        # Update info
-        info['state_string'] = self.current_state_str
-        info['state_valid'] = self.sequence_renderer.validate_observation(self.current_state_str)
-        
-        return self.current_state_str, reward, terminated, truncated, info
-    
-    def get_next_state_observation(self, state_str: str, action: int) -> Tuple[str, str]:
-        """
-        Get next state and observation given current state and action.
-        
-        Args:
-            state_str: Current state as string
-            action: Action index
-            
-        Returns:
-            Tuple of (next_state_str, observation_str)
-        """
-        # Convert string state to array
-        current_state_array = deserialize_state(state_str)
-        
-        # Temporarily set the cube state
-        original_state = self.current_state.copy()
-        original_state_str = self.current_state_str
-        
-        self.current_state = current_state_array
-        self.cube_simulator.set_state(current_state_array)
-        
-        # Apply action
-        action_type, action_name = self.action_space_config.get_action(action)
-        
-        if action_type == ActionType.CUBE:
-            success = self.cube_simulator.apply_move(action_name)
-            if success:
-                next_state_array = self.cube_simulator.get_state()
-                next_state_str = serialize_state(next_state_array)
-                observation_str = next_state_str  # In sequence env, state == observation
-            else:
-                # Invalid move - return current state
-                next_state_str = state_str
-                observation_str = state_str
-        else:
-            # Invalid action type for sequence env
-            next_state_str = state_str
-            observation_str = state_str
-        
-        # Restore original state
-        self.current_state = original_state
-        self.current_state_str = original_state_str
-        self.cube_simulator.set_state(original_state)
-        
-        return next_state_str, observation_str
-    
-    def _get_observation(self) -> str:
-        """Get current observation (string representation)"""
-        return self.current_state_str
-    
-    def render(self):
-        """Render the current state as string"""
-        if self.render_mode == "human":
-            print(f"Cube state: {self.current_state_str}")
-            return self.current_state_str
-        else:
-            return self.current_state_str
-    
-    def get_state_string(self) -> str:
-        """Get current state as string"""
-        return self.current_state_str
-    
-    def set_state_string(self, state_str: str):
-        """Set state from string representation"""
-        if not self.sequence_renderer.validate_observation(state_str):
-            raise ValueError(f"Invalid state string: {state_str}")
-        
-        state_array = deserialize_state(state_str)
-        self.set_state(state_array)
-        self.current_state_str = state_str
-    
-    def get_action_names(self) -> List[str]:
-        """Get list of action names"""
-        actions = []
-        for i in range(self.action_space.n):
-            _, action_name = self.action_space_config.get_action(i)
-            actions.append(action_name)
-        return actions 
+    def _setup_observation_space(self):
+        # Observation is a 54-char string with digits 0-5 representing cube faces
+        self.observation_space = spaces.Text(54, charset=COLOR_CHARS)
+
+    def get_observation(self) -> Any:
+        # Use the renderer for observation
+        return self.renderer.get_observation(self.cube_manager.get_state())
+
+    def _reset_camera_params(self):
+        # Sequence env does not use camera/view
+        self.camera_params = None
+
+    def _update_camera_params(self, action_name: str):
+        # Sequence env does not use camera/view
+        pass
+
+def make_sequence_env(max_steps: int = 1000, scramble_moves: int = 20, reward_function_config: Dict[str, Any] = {}):
+    cube_manager = CubeSimulator()
+    action_space_config = CUBE_ONLY_ACTION_SPACE
+    reward_function = get_reward_function(**reward_function_config)
+    return SequenceCubeEnv(cube_manager, action_space_config, max_steps, scramble_moves, reward_function)

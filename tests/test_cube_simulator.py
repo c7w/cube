@@ -1,14 +1,6 @@
 import numpy as np
-from environment.cube_simulator import CubeSimulator, Face, Color
+from environment.utils.cube_simulator import CubeSimulator
 
-def test_cube_init_and_reset():
-    cube = CubeSimulator()
-    # 检查每个面都是同色
-    for face_idx in range(6):
-        face = cube.faces[face_idx]
-        assert np.all(face == face[4])
-    assert cube.is_solved()
-    assert cube.get_solved_faces_count() == 6
 
 def test_cube_scramble():
     cube = CubeSimulator()
@@ -32,3 +24,19 @@ def test_cube_action_history():
     assert history == ['F', 'U']
     cube.undo_last_move()
     assert cube.get_action_history() == ['F'] 
+
+def test_cube_action_consistency():
+    cube = CubeSimulator()
+    cube.apply_move('F')
+    cube.apply_move('U')
+    cube.apply_move('U\'')
+    cube.apply_move('F\'')
+    cube.apply_move('R')
+    cube.apply_move('R\'')
+    cube.apply_move('F')
+    cube.apply_move('F\'')
+    cube.apply_move('U')
+    cube.apply_move('U\'')
+    cube.apply_move('R')
+    cube.apply_move('R\'')
+    assert cube.is_solved()

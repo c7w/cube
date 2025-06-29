@@ -1,5 +1,5 @@
 import numpy as np
-from environment.reward import SparseReward, DenseReward, HybridReward
+from environment.rewards.reward import SparseReward, DenseReward, HybridReward
 
 def make_solved_state():
     state = np.zeros((6, 9), dtype=int)
