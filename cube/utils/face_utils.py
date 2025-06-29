@@ -115,7 +115,7 @@ def get_face_colors(state: str) -> dict:
         "DOWN": state[49]
     }
 
-def get_standard_face() -> Dict[str, Face]:
+def get_standard_faces() -> Dict[str, Face]:
     """
     Get the standard face of the cube.
     """

@@ -26,44 +26,24 @@ class CubeAction(Enum):
     D_PRIME = "D'"  # Down face counter-clockwise
 
 
-class ViewAction(Enum):
-    """View manipulation actions"""
-    ROTATE_X = "rotate_x"      # Rotate view around X axis
-    ROTATE_Y = "rotate_y"      # Rotate view around Y axis
-    ROTATE_Z = "rotate_z"      # Rotate view around Z axis
-    RESET_VIEW = "reset_view"  # Reset to default view
-
-
-class SpecialAction(Enum):
-    """Special actions"""
-    SOLVE = "solve"        # Solve the cube (for evaluation)
-    SCRAMBLE = "scramble"  # Scramble the cube
-    UNDO = "undo"          # Undo last action
-
-
 class ActionType(Enum):
     """Action type categories"""
     CUBE = "cube"
     VIEW = "view"
-    SPECIAL = "special"
 
 
 class ActionSpace:
     """Action space for the CubeBench environment"""
     
-    def __init__(self, include_view_actions: bool = True, include_special_actions: bool = False, 
-                 custom_view_actions: List[str] = None):
+    def __init__(self, view_actions: List[str] = None):
         """
         Initialize action space.
         
         Args:
-            include_view_actions: Whether to include view manipulation actions
-            include_special_actions: Whether to include special actions (solve, scramble, undo)
-            custom_view_actions: Custom list of view actions (overrides default view actions)
+            view_actions: Custom list of view actions (overrides default view actions)
         """
-        self.include_view_actions = include_view_actions
-        self.include_special_actions = include_special_actions
-        self.custom_view_actions = custom_view_actions
+        self.cube_actions = [action.value for action in CubeAction]
+        self.view_actions = view_actions
         
         # Build action list
         self.actions = []
@@ -75,20 +55,9 @@ class ActionSpace:
             self.actions.append((ActionType.CUBE, action.value))
         
         # Add view actions if enabled
-        if include_view_actions:
-            if custom_view_actions:
-                # Use custom view actions
-                for action_name in custom_view_actions:
-                    self.actions.append((ActionType.VIEW, action_name))
-            else:
-                # Use default view actions
-                for action in ViewAction:
-                    self.actions.append((ActionType.VIEW, action.value))
-        
-        # Add special actions if enabled
-        if include_special_actions:
-            for action in SpecialAction:
-                self.actions.append((ActionType.SPECIAL, action.value))
+        if view_actions:
+            for action_name in view_actions:
+                self.actions.append((ActionType.VIEW, action_name))
         
         # Create mappings
         for idx, (action_type, action_name) in enumerate(self.actions):
@@ -117,10 +86,6 @@ class ActionSpace:
         """Get list of view manipulation actions"""
         return [action_name for action_type, action_name in self.actions if action_type == ActionType.VIEW]
     
-    def get_special_actions(self) -> List[str]:
-        """Get list of special actions"""
-        return [action_name for action_type, action_name in self.actions if action_type == ActionType.SPECIAL]
-    
     def to_gym_space(self) -> gym.Space:
         """Convert to Gymnasium space"""
         return spaces.Discrete(self.n_actions)
@@ -129,9 +94,4 @@ class ActionSpace:
         return self.n_actions
     
     def __repr__(self) -> str:
-        return f"ActionSpace(n_actions={self.n_actions}, include_view={self.include_view_actions}, include_special={self.include_special_actions})"
-
-
-# Predefined action spaces for common use cases
-CUBE_ONLY_ACTION_SPACE = ActionSpace(include_view_actions=False, include_special_actions=False)
-FULL_ACTION_SPACE = ActionSpace(include_view_actions=True, include_special_actions=True) 
+        return f"ActionSpace(n_actions={self.n_actions})"

@@ -2,6 +2,21 @@
 Cube simulator for the CubeBench environment.
 Implements a 3x3x3 Rubik's cube with state management and move validation.
 Uses a 54-element state array with explicit permutation mappings.
+
+Expanded state representation:
+
+                    36 37 38
+                    39 40 41
+                    42 43 44
+         18 19 20   0  1  2   27 28 29 
+         21 22 23   3  4  5   30 31 32
+         24 25 26   6  7  8   33 34 35
+                   45 46 47
+                   48 49 50
+                   51 52 53
+                    9 10 11
+                   12 13 14
+                   15 16 17                
 """
 
 import numpy as np
@@ -10,15 +25,7 @@ from enum import Enum
 import random
 
 
-class Color(Enum):
-    """Cube color enumeration"""
-    WHITE = 0
-    YELLOW = 1
-    RED = 2
-    ORANGE = 3
-    BLUE = 4
-    GREEN = 5
-
+State = np.ndarray
 
 class CubeSimulator:
     """
@@ -39,16 +46,8 @@ class CubeSimulator:
     3 4 5
     6 7 8
     """
-    
-    # Face starting positions
-    FACE_POSITIONS = {
-        'FRONT': 0,   # 0-8
-        'BACK': 9,    # 9-17
-        'LEFT': 18,   # 18-26
-        'RIGHT': 27,  # 27-35
-        'UP': 36,     # 36-44
-        'DOWN': 45    # 45-53
-    }
+    FACE_TO_STATE = {"FRONT": 0, "BACK": 1, "LEFT": 2, "RIGHT": 3, "UP": 4, "DOWN": 5}
+    STATE_TO_FACE = {0: "FRONT", 1: "BACK", 2: "LEFT", 3: "RIGHT", 4: "UP", 5: "DOWN"}
     
     # --- Cycle notation to permutation utility ---
     @staticmethod
@@ -61,32 +60,34 @@ class CubeSimulator:
         return perm
 
     # --- Move cycles for each face (clockwise) ---
-    MOVE_CYCLES = {
-        'F': [  # right
-            (0, 2, 8, 6), (1, 5, 7, 3),
-            (42, 27, 47, 26), (43, 30, 46, 23), (44, 33, 45, 20)
-        ],
-        'B': [
-            (9, 11, 17, 15), (10, 14, 16, 12),
-            (36, 24, 53, 29), (37, 21, 52, 32), (38, 18, 51, 35)
-        ],
-        'L': [
-            (18, 20, 26, 24), (19, 23, 25, 21),
-            (36, 0, 45, 9), (39, 3, 48, 12), (42, 6, 51, 15)
-        ],
-        'R': [
-            (27, 29, 35, 33), (28, 32, 34, 30),
-            (2, 38, 11, 47), (5, 41, 14, 50), (8, 44, 17, 53)
-        ],
-        'U': [
-            (36, 38, 44, 42), (37, 41, 43, 39),
-            (15, 29, 2, 20), (16, 28, 1, 19), (17, 27, 0, 18)
-        ],
-        'D': [
-            (45, 47, 53, 51), (46, 50, 52, 48),
-            (6, 33, 11, 24), (7, 34, 10, 25), (8, 35, 9, 26)
-        ]
-    }
+    @property
+    def MOVE_CYCLES(cls):
+        return {
+            'F': [  # right
+                (0, 2, 8, 6), (1, 5, 7, 3),
+                (42, 27, 47, 26), (43, 30, 46, 23), (44, 33, 45, 20)
+            ],
+            'B': [
+                (9, 11, 17, 15), (10, 14, 16, 12),
+                (36, 24, 53, 29), (37, 21, 52, 32), (38, 18, 51, 35)
+            ],
+            'L': [
+                (18, 20, 26, 24), (19, 23, 25, 21),
+                (36, 0, 45, 9), (39, 3, 48, 12), (42, 6, 51, 15)
+            ],
+            'R': [
+                (27, 29, 35, 33), (28, 32, 34, 30),
+                (2, 38, 11, 47), (5, 41, 14, 50), (8, 44, 17, 53)
+            ],
+            'U': [
+                (36, 38, 44, 42), (37, 41, 43, 39),
+                (15, 29, 2, 20), (16, 28, 1, 19), (17, 27, 0, 18)
+            ],
+            'D': [
+                (45, 47, 53, 51), (46, 50, 52, 48),
+                (6, 33, 11, 24), (7, 34, 10, 25), (8, 35, 9, 26)
+            ]
+        }
 
     # --- Permutations generated from cycles ---
     
@@ -101,15 +102,15 @@ class CubeSimulator:
     def reset(self):
         """Reset cube to solved state"""
         # Initialize with solved colors
-        self.state = np.zeros(54, dtype=int)
+        self.state: State = np.zeros(54, dtype=int)
         
         # Set face colors
-        self.state[0:9] = Color.RED.value      # FRONT - Red
-        self.state[9:18] = Color.ORANGE.value  # BACK - Orange
-        self.state[18:27] = Color.BLUE.value   # LEFT - Blue
-        self.state[27:36] = Color.GREEN.value  # RIGHT - Green
-        self.state[36:45] = Color.YELLOW.value # UP - Yellow
-        self.state[45:54] = Color.WHITE.value  # DOWN - White
+        self.state[0:9] = 0
+        self.state[9:18] = 1
+        self.state[18:27] = 2
+        self.state[27:36] = 3
+        self.state[36:45] = 4
+        self.state[45:54] = 5
         
         # Action history for undo functionality
         self.action_history = []
@@ -204,66 +205,18 @@ class CubeSimulator:
         
         self.state = new_state
     
-    def get_face(self, face_name: str) -> np.ndarray:
-        """Get a specific face as a 3x3 array"""
-        if face_name not in self.FACE_POSITIONS:
-            raise ValueError(f"Unknown face: {face_name}")
-        
-        start_pos = self.FACE_POSITIONS[face_name]
-        face_data = self.state[start_pos:start_pos+9]
-        return face_data.reshape(3, 3)
-    
-    def get_all_faces(self) -> Dict[str, np.ndarray]:
-        """Get all faces as 3x3 arrays"""
-        faces = {}
-        for face_name in self.FACE_POSITIONS:
-            faces[face_name] = self.get_face(face_name)
-        return faces
-    
     def is_solved(self) -> bool:
         """Check if the cube is solved"""
-        for face_name in self.FACE_POSITIONS:
-            face = self.get_face(face_name)
-            center_color = face[1, 1]  # Center piece
-            if not np.all(face == center_color):
-                return False
-        return True
+        return np.all(self.state == np.array([0] * 9 + [1] * 9 + [2] * 9 + [3] * 9 + [4] * 9 + [5] * 9)).item()
     
-    def get_solved_faces_count(self) -> int:
-        """Count the number of solved faces"""
-        solved_count = 0
-        for face_name in self.FACE_POSITIONS:
-            face = self.get_face(face_name)
-            center_color = face[1, 1]
-            if np.all(face == center_color):
-                solved_count += 1
-        return solved_count
-    
-    def get_state(self) -> np.ndarray:
+    def get_state(self) -> State:
         """Get current cube state as 54-element array"""
         return self.state.copy()
     
-    def get_state_as_faces(self) -> np.ndarray:
-        """Get current cube state as 6x9 array for compatibility"""
-        faces = np.zeros((6, 9), dtype=int)
-        face_order = ['FRONT', 'BACK', 'LEFT', 'RIGHT', 'UP', 'DOWN']
-        
-        for i, face_name in enumerate(face_order):
-            start_pos = self.FACE_POSITIONS[face_name]
-            faces[i] = self.state[start_pos:start_pos+9]
-        
-        return faces
-    
-    def set_state(self, state: np.ndarray):
+    def set_state(self, state: State):
         """Set cube state from 54-element array"""
         if len(state) == 54:
             self.state = state.copy()
-        elif state.shape == (6, 9):
-            # Convert from 6x9 format for compatibility
-            face_order = ['FRONT', 'BACK', 'LEFT', 'RIGHT', 'UP', 'DOWN']
-            for i, face_name in enumerate(face_order):
-                start_pos = self.FACE_POSITIONS[face_name]
-                self.state[start_pos:start_pos+9] = state[i]
         else:
             raise ValueError(f"Invalid state shape: {state.shape}")
     
@@ -286,5 +239,4 @@ class CubeSimulator:
         return self.action_history.copy()
     
     def __repr__(self) -> str:
-        solved_faces = self.get_solved_faces_count()
-        return f"CubeSimulator(solved_faces={solved_faces}/6, moves={self.get_move_count()})" 
+        return f"CubeSimulator(moves={self.get_move_count()})" 
