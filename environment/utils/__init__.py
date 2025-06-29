@@ -1,11 +1,22 @@
 """
-Utility functions for CubeBench environments.
+Utility functions and classes for CubeBench.
 """
 
-from .state_utils import serialize_state, deserialize_state
-from .view_utils import ViewType, get_vertex_views, get_face_views, get_view_neighbors
+from .cube_simulator import CubeSimulator
+from .state_utils import (
+    serialize_state as state_to_color_string,
+    deserialize_state as color_string_to_state,
+    validate_state_string as validate_color_string,
+    COLOR_TO_LETTER
+)
+
+# Get COLOR_CHARS from COLOR_TO_LETTER mapping
+COLOR_CHARS = list(COLOR_TO_LETTER.values())
 
 __all__ = [
-    'serialize_state', 'deserialize_state',
-    'ViewType', 'get_vertex_views', 'get_face_views', 'get_view_neighbors'
-] 
+    'CubeSimulator',
+    'COLOR_CHARS',
+    'state_to_color_string',
+    'color_string_to_state',
+    'validate_color_string',
+]
